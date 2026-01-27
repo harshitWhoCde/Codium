@@ -20,6 +20,9 @@ const EditorPage = () => {
     // State to store connected clients
     const [clients, setClients] = useState([]);
     const [language, setLanguage] = useState('java');
+    
+    // NEW: Track if socket is fully connected
+    const [isSocketInitialized, setSocketInitialized] = useState(false);
 
     // Security Check
     if (!location.state) {
@@ -31,6 +34,9 @@ const EditorPage = () => {
         const init = async () => {
             socketRef.current = await initSocket();
             
+            // 1. Mark socket as initialized to force a re-render
+            setSocketInitialized(true);
+
             socketRef.current.on('connect_error', (err) => handleErrors(err));
             socketRef.current.on('connect_failed', (err) => handleErrors(err));
 
@@ -45,23 +51,20 @@ const EditorPage = () => {
                 username: location.state?.username,
             });
 
-            // Listen for Joined Event
             socketRef.current.on(ACTIONS.JOINED, ({ clients, username, socketId }) => {
                 if (username !== location.state?.username) {
                     toast.success(`${username} joined the room.`);
+                    
+                    if (codeRef.current) {
+                        socketRef.current.emit(ACTIONS.SYNC_CODE, {
+                            code: codeRef.current,
+                            socketId,
+                        });
+                    }
                 }
                 setClients(clients);
-                
-                // Sync code on join
-                if (codeRef.current) {
-                    socketRef.current.emit(ACTIONS.SYNC_CODE, {
-                        code: codeRef.current,
-                        socketId,
-                    });
-                }
             });
 
-            // Listen for Disconnect
             socketRef.current.on(ACTIONS.DISCONNECTED, ({ socketId, username }) => {
                 toast.success(`${username} left the room.`);
                 setClients((prev) => {
@@ -72,7 +75,6 @@ const EditorPage = () => {
 
         init();
         
-        // Cleanup
         return () => {
             if(socketRef.current) {
                 socketRef.current.disconnect();
@@ -86,32 +88,32 @@ const EditorPage = () => {
         codeRef.current = code;
     };
 
-    // ==========================================
-    // 👇 THIS IS THE MISSING FIX FOR DUPLICATES 👇
-    // ==========================================
     const uniqueClients = Object.values(
         clients.reduce((acc, client) => {
             acc[client.username] = client;
             return acc;
         }, {})
     );
-    // ==========================================
+
+    // 2. Show a loader until socket is ready
+    if (!isSocketInitialized) {
+        return (
+            <div className="flex h-screen items-center justify-center bg-[#0f0a19] text-white">
+                Loading workspace...
+            </div>
+        );
+    }
 
     return (
         <div className="flex h-screen bg-[#0f0a19] text-white overflow-hidden font-sans">
             
-            {/* 1. Sidebar */}
             <div className="flex-none h-full">
-                {/* Use uniqueClients here */}
                 <Sidebar clients={uniqueClients} roomId={roomId}/> 
             </div>
 
-            {/* 2. Main Workspace */}
             <div className="flex-1 flex p-4 gap-4 h-full">
                 
-                {/* Left: Code Editor */}
                 <div className="flex-1 h-full min-w-0">
-                    {/* Use uniqueClients here */}
                     <CodeEditor 
                         socketRef={socketRef} 
                         roomId={roomId} 
@@ -123,19 +125,20 @@ const EditorPage = () => {
                     /> 
                 </div>
 
-                {/* Right: Live Users + Output (Stacked) */}
                 <div className="w-[350px] lg:w-[400px] flex-none h-full flex flex-col gap-4">
                     
-                    {/* Top: Live Users List */}
                     <div className="h-[40%] bg-[#1e1e1e] rounded-xl border border-gray-800 shadow-2xl overflow-hidden">
-                        {/* Use uniqueClients here */}
                         <ClientList clients={uniqueClients} />
                     </div>
 
-                    {/* Bottom: Terminal/Output */}
                     <div className="flex-1 bg-[#1e1e1e] rounded-xl border border-gray-800 shadow-2xl overflow-hidden">
-                        <Output editorRef={editorRef} language={language} socketRef={socketRef} roomId={roomId}
-                        username={location.state?.username} /> 
+                        <Output 
+                            editorRef={editorRef} 
+                            language={language} 
+                            socketRef={socketRef} 
+                            roomId={roomId}
+                            username={location.state?.username} 
+                        /> 
                     </div>
 
                 </div>

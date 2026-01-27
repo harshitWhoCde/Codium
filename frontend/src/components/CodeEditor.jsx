@@ -3,7 +3,6 @@ import Editor from '@monaco-editor/react';
 import { ChevronDown, Code2 } from 'lucide-react';
 import { ACTIONS } from '../Actions';
 
-// 1. Define supported languages
 const LANGUAGES = [
   "javascript",
   "python",
@@ -17,26 +16,39 @@ const CodeEditor = ({ socketRef, roomId, onCodeChange, language, setLanguage, ed
   
   const isRemoteUpdate = useRef(false); 
   const [isDropdownOpen, setDropdownOpen] = useState(false);
+  
+  // NEW: Store code that arrives before the editor is ready
+  const pendingDiff = useRef(null);
 
   const onMount = (editor) => {
     editorRef.current = editor;
     editor.focus();
+    
+    // NEW: If we have code waiting, apply it now!
+    if (pendingDiff.current) {
+        editor.setValue(pendingDiff.current);
+        pendingDiff.current = null;
+    }
   };
 
   // Listen for remote changes
   useEffect(() => {
     if (socketRef.current) {
         socketRef.current.on(ACTIONS.CODE_CHANGE, ({ code }) => {
-            // FIX: Check if editor exists before using it
-            if (!editorRef.current) return;
-
-            if (code !== null) {
-                const currentCode = editorRef.current.getValue();
-                if (code !== currentCode) {
-                    isRemoteUpdate.current = true; 
-                    editorRef.current.setValue(code);
-                    isRemoteUpdate.current = false; 
+            
+            // 1. If Editor is ready, update it
+            if (editorRef.current) {
+                if (code !== null) {
+                    const currentCode = editorRef.current.getValue();
+                    if (code !== currentCode) {
+                        isRemoteUpdate.current = true; 
+                        editorRef.current.setValue(code);
+                        isRemoteUpdate.current = false; 
+                    }
                 }
+            } else {
+                // 2. If Editor NOT ready, save it for later (Fixes the race condition)
+                pendingDiff.current = code;
             }
         });
     }
@@ -67,8 +79,6 @@ const CodeEditor = ({ socketRef, roomId, onCodeChange, language, setLanguage, ed
       
       {/* Header */}
       <div className="h-16 flex items-center justify-between px-6 border-b border-gray-800 bg-[#1e1e1e]">
-        
-        {/* Language Selector */}
         <div className="flex items-center gap-3">
             <div className="flex items-center gap-2 text-gray-400">
                 <Code2 size={18} />
