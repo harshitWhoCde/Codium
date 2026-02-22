@@ -6,10 +6,13 @@ export const ACTIONS = {
     SYNC_CODE: 'sync-code',
     LEAVE: 'leave',
     SYNC_OUTPUT: 'sync-output',
-    
-    // 👇 ADD THESE MISSING EVENTS 👇
     TYPING: 'typing',
     STOP_TYPING: 'stop-typing',
     SEND_MESSAGE: 'send-message',
     RECEIVE_MESSAGE: 'receive-message',
+    
+    // 👇 NEW CALL EVENTS
+    JOIN_CALL: 'join-call',       // User clicked "Start Call"
+    LEAVE_CALL: 'leave-call',     // User clicked "Leave Call"
+    USER_JOINED_CALL: 'user-joined-call', // Tell others to connect
 };

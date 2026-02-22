@@ -1,4 +1,3 @@
-
 import { io } from 'socket.io-client';
 
 export const initSocket = async () => {
@@ -9,7 +8,7 @@ export const initSocket = async () => {
         transports: ['websocket'],
     };
     
-    // IMPORTANT: Make sure this PORT matches your Server PORT
-    // If your server says "Listening on 5001", change this to 5001.
-    return io('http://localhost:5000', options);
+    // 👇 AUTOMATIC SWITCHING
+    const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+    return io(backendUrl, options);
 };

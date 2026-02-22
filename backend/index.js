@@ -6,10 +6,7 @@ const ACTIONS = require('./Actions');
 
 const server = http.createServer(app);
 const io = new Server(server, {
-    cors: {
-        origin: "*",
-        methods: ["GET", "POST"]
-    }
+    cors: { origin: "*", methods: ["GET", "POST"] }
 });
 
 const userSocketMap = {};
@@ -19,79 +16,87 @@ function getAllConnectedClients(roomId) {
         (socketId) => {
             return {
                 socketId,
-                username: userSocketMap[socketId],
+                // Safe access in case user is missing
+                username: userSocketMap[socketId]?.username,
+                peerId: userSocketMap[socketId]?.peerId, // 👈 SEND PEER ID
             };
         }
     );
 }
 
 io.on('connection', (socket) => {
-    console.log('socket connected', socket.id);
-
-    // 1. JOIN LOGIC
-    socket.on(ACTIONS.JOIN, ({ roomId, username }) => {
-        userSocketMap[socket.id] = username;
+    
+    // 1. JOIN LOGIC (Updated to handle peerId)
+    socket.on(ACTIONS.JOIN, ({ roomId, username, peerId }) => {
+        // STORE BOTH USERNAME AND PEER ID
+        userSocketMap[socket.id] = { username, peerId }; 
+        
         socket.join(roomId);
         const clients = getAllConnectedClients(roomId);
+        
         clients.forEach(({ socketId }) => {
             io.to(socketId).emit(ACTIONS.JOINED, {
                 clients,
                 username,
                 socketId: socket.id,
+                peerId, // Send new user's peerId to everyone
             });
         });
-    });
 
-    // 2. CODE SYNC LOGIC
-    socket.on(ACTIONS.CODE_CHANGE, ({ roomId, code }) => {
-        socket.in(roomId).emit(ACTIONS.CODE_CHANGE, { code });
+        
     });
-
-    // 3. SYNC CODE (on join)
-    socket.on(ACTIONS.SYNC_CODE, ({ socketId, code }) => {
-        io.to(socketId).emit(ACTIONS.CODE_CHANGE, { code });
-    });
-
-    // 4. CHAT LOGIC
-    socket.on(ACTIONS.SEND_MESSAGE, ({ roomId, message, username, time }) => {
-        // Broadcast to everyone else in the room
-        socket.in(roomId).emit(ACTIONS.RECEIVE_MESSAGE, {
-            username,
-            message,
-            time,
+    // 8. VOICE CALL LOGIC
+    socket.on(ACTIONS.JOIN_CALL, ({ roomId, peerId }) => {
+        // Update user record with peerId
+        if (userSocketMap[socket.id]) {
+            userSocketMap[socket.id].peerId = peerId;
+        }
+        // Notify others to call this user
+        socket.in(roomId).emit(ACTIONS.USER_JOINED_CALL, {
+            peerId,
+            username: userSocketMap[socket.id]?.username,
+            socketId: socket.id
         });
     });
 
-    // 5. TYPING INDICATOR LOGIC
-    socket.on(ACTIONS.TYPING, ({ roomId, username }) => {
-        socket.in(roomId).emit(ACTIONS.TYPING, { username });
+    socket.on(ACTIONS.LEAVE_CALL, ({ roomId }) => {
+        if (userSocketMap[socket.id]) {
+            delete userSocketMap[socket.id].peerId;
+        }
+        // Notify others to remove the stream
+        socket.in(roomId).emit(ACTIONS.LEAVE_CALL, {
+            socketId: socket.id
+        });
     });
-
-    socket.on(ACTIONS.STOP_TYPING, ({ roomId, username }) => {
-        socket.in(roomId).emit(ACTIONS.STOP_TYPING, { username });
-    });
-
-    // 6. SYNC OUTPUT (Run Code Results)
-    socket.on(ACTIONS.SYNC_OUTPUT, ({ roomId, output }) => {
-        console.log(`📢 Output sync received for room ${roomId}`);
-        // Broadcast to everyone in the room
-        io.to(roomId).emit(ACTIONS.SYNC_OUTPUT, { output });
-    });
-
-    // 7. DISCONNECT LOGIC
+    // 2. DISCONNECT LOGIC
     socket.on('disconnecting', () => {
         const rooms = [...socket.rooms];
         rooms.forEach((roomId) => {
             socket.in(roomId).emit(ACTIONS.DISCONNECTED, {
                 socketId: socket.id,
-                username: userSocketMap[socket.id],
+                username: userSocketMap[socket.id]?.username,
             });
         });
         delete userSocketMap[socket.id];
         socket.leave();
     });
 
-}); // <--- THIS CLOSING BRACKET WAS IN THE WRONG PLACE BEFORE
+    // ... (Keep your existing CODE_CHANGE, SYNC_CODE, CHAT, OUTPUT logic here) ...
+    // ... Copy paste the rest of your previous events below ...
+    
+    socket.on(ACTIONS.CODE_CHANGE, ({ roomId, code }) => {
+        socket.in(roomId).emit(ACTIONS.CODE_CHANGE, { code });
+    });
+    socket.on(ACTIONS.SYNC_CODE, ({ socketId, code }) => {
+        io.to(socketId).emit(ACTIONS.CODE_CHANGE, { code });
+    });
+    socket.on(ACTIONS.SEND_MESSAGE, ({ roomId, message, username, time }) => {
+        socket.in(roomId).emit(ACTIONS.RECEIVE_MESSAGE, { username, message, time });
+    });
+    socket.on(ACTIONS.SYNC_OUTPUT, ({ roomId, output }) => {
+        io.to(roomId).emit(ACTIONS.SYNC_OUTPUT, { output });
+    });
+});
 
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => console.log(`Listening on port ${PORT}`));
