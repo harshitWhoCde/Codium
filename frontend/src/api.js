@@ -11,16 +11,15 @@ const LANGUAGE_MAPPING = {
 
 export const executeCode = async (language, sourceCode) => {
   try {
-    // 👇 1. Point to your Render backend (or localhost if testing locally)
-    const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+    // 👇 FIX: .replace(/\/$/, "") removes any accidental slash at the end of your URL
+    const backendUrl = (import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000').replace(/\/$/, "");
     
-    // 👇 2. Send the code directly to YOUR server's new /compile route
+    // Now it will correctly call /compile instead of //compile
     const response = await axios.post(`${backendUrl}/compile`, {
       language: LANGUAGE_MAPPING[language] || 'javascript',
       sourceCode: sourceCode
     });
 
-    // 3. Return the result to Output.jsx
     return {
       run: {
         output: response.data.output
