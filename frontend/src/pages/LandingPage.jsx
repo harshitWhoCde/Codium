@@ -113,7 +113,7 @@ export default function LandingPage() {
             <div className="w-10 h-10 bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 rounded-[12px] flex items-center justify-center shadow-lg">
               <span className="tracking-tight">DS</span>
             </div>
-            <span className="text-xl tracking-tight">DevSync</span>
+            <span className="text-xl tracking-tight">Codium</span>
           </div>
 
           <div className="hidden md:flex items-center gap-8">
@@ -274,7 +274,7 @@ export default function LandingPage() {
             <div>
               <div className="flex items-center gap-2 mb-4">
                 <div className="w-8 h-8 bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 rounded-[12px]"></div>
-                <span className="text-lg">DevSync</span>
+                <span className="text-lg">Codium</span>
               </div>
               <p className="text-gray-400 text-sm">
                 Real-time collaborative code compilation platform for modern development teams.
@@ -302,13 +302,13 @@ export default function LandingPage() {
             <div>
               <h4 className="mb-4">Connect</h4>
               <div className="flex gap-3">
-                <a className="w-10 h-10 bg-white/5 rounded-[12px] flex items-center justify-center hover:bg-white/10">
+                <a className="w-10 h-10 bg-white/5 rounded-[12px] flex items-center justify-center hover:bg-white/10" alt="GitHub" href="https://github.com/harshitWhoCde">
                   <Github className="w-5 h-5" />
                 </a>
-                <a className="w-10 h-10 bg-white/5 rounded-[12px] flex items-center justify-center hover:bg-white/10">
+                <a className="w-10 h-10 bg-white/5 rounded-[12px] flex items-center justify-center hover:bg-white/10" alt="Twitter" href="https://x.com/GhawaleHarshit" target="_blank">
                   <Twitter className="w-5 h-5" />
                 </a>
-                <a className="w-10 h-10 bg-white/5 rounded-[12px] flex items-center justify-center hover:bg-white/10">
+                <a className="w-10 h-10 bg-white/5 rounded-[12px] flex items-center justify-center hover:bg-white/10"   alt="LinkedIn" href="https://www.linkedin.com/in/harshitwhocode/" target="_blank">
                   <Linkedin className="w-5 h-5" />
                 </a>
               </div>
@@ -317,7 +317,7 @@ export default function LandingPage() {
           </div>
 
           <div className="pt-8 border-t border-white/10 text-center text-sm text-gray-500">
-            © 2025 DevSync. All rights reserved.
+            © 2025 Codiun. All rights reserved.
           </div>
         </div>
       </footer>
